@@ -1,4 +1,8 @@
+using API.Middlewares;
 using Application.Interfaces;
+using Application.UseCases.KitchenOrders.Comands;
+using Application.UseCases.KitchenOrders.Handlers;
+using Domain.Entities;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -18,11 +22,14 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped<IKitchenOrderRepository, KitchenOrderRepository>();
 
 
+
+// Handlers
+builder.Services.AddScoped<ICreateKitchenOrderHandler, CreateKitchenOrderHandler>();
+
 builder.Services.AddScoped<Application.UseCases.Handlers.GetKitchenQueueHandler>();
 builder.Services.AddScoped<Application.UseCases.Handlers.StartItemPreparationHandler>();
 builder.Services.AddScoped<Application.UseCases.Handlers.CompleteItemHandler>();
 builder.Services.AddScoped<Application.UseCases.Handlers.CancelItemHandler>();
-
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -36,6 +43,9 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+
+app.UseMiddleware<GlobalExceptionMiddleware>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
