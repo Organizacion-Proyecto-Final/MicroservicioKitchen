@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Domain.Enums;
 
@@ -23,6 +24,7 @@ namespace Domain.Entities
         public string Notes { get; set; } = string.Empty;
         public bool IsRushed { get; set; }
 
+        [JsonIgnore] // cambiar luego por los DTOs y eliminar linea
         public virtual KitchenOrder Order { get; set; } = null!;
     }
 }
