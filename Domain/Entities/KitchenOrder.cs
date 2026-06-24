@@ -12,7 +12,7 @@ namespace Domain.Entities
         public Guid Id { get; set; }
         public Guid OrderId { get; set; }
         public int TableNumber { get; set; }
-        public string WaiterName { get; set; } = string.Empty;
+        public Guid WaiterId { get; set; } 
         public OrderStatus Status { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? EstimatedFinishTime { get; set; }

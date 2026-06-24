@@ -41,14 +41,6 @@ namespace Application.UseCases.KitchenOrders.Handlers
             });
             }
 
-            // 3. Validar nombre del mozo
-            if (string.IsNullOrWhiteSpace(command.WaiterName))
-            {
-                throw new ValidationExceptions(new Dictionary<string, string[]>
-            {
-                { "waiterName", new[] { "El nombre del mozo es obligatorio." } }
-            });
-            }
 
             // 4. Validar cada item
             var validationErrors = new Dictionary<string, string[]>();
@@ -63,7 +55,7 @@ namespace Application.UseCases.KitchenOrders.Handlers
                 if (string.IsNullOrWhiteSpace(item.ProductName))
                     itemErrors.Add("El nombre del producto es obligatorio.");
 
-                if (item.EstimatedTime <= 0)
+                if (item.DurationMinutes <= 0)
                     itemErrors.Add("El tiempo estimado debe ser mayor a 0 minutos.");
 
                 if (itemErrors.Any())
@@ -82,7 +74,7 @@ namespace Application.UseCases.KitchenOrders.Handlers
                 Id = Guid.NewGuid(),
                 OrderId = command.OrderId,
                 TableNumber = command.TableNumber,
-                WaiterName = command.WaiterName,
+                WaiterId = command.WaiterId,
                 Status = OrderStatus.Pending,
                 CreatedAt = DateTime.UtcNow,
                 TotalItems = command.Items.Count,
@@ -100,8 +92,7 @@ namespace Application.UseCases.KitchenOrders.Handlers
                     KitchenOrderId = order.Id,
                     ProductId = itemDto.ProductId,
                     ProductName = itemDto.ProductName,
-                    Category = itemDto.Category,
-                    EstimatedTime = itemDto.EstimatedTime,
+                    EstimatedTime = itemDto.DurationMinutes,
                     StartTime = null,
                     FinishTime = null,
                     Status = ItemStatus.Pending,

@@ -25,16 +25,6 @@ namespace Infrastructure.Persistence.Repositories
                 .FirstOrDefaultAsync(k => k.Id == id);
         }
 
-        public async Task<List<KitchenOrder>> GetActiveOrdersAsync()
-        {
-            return await _context.KitchenOrders
-                .Include(k => k.Items)
-                .Where(k => k.Status != Domain.Enums.OrderStatus.Delivered &&
-                           k.Status != Domain.Enums.OrderStatus.Cancelled)
-                .OrderBy(k => k.CreatedAt)
-                .ToListAsync();
-        }
-
         public async Task<KitchenOrder> CreateAsync(KitchenOrder order)
         {
             await _context.KitchenOrders.AddAsync(order);
@@ -56,18 +46,5 @@ namespace Infrastructure.Persistence.Repositories
                 .FirstOrDefaultAsync(k => k.Items.Any(i => i.Id == itemId));
         }
 
-        public async Task<KitchenOrder?> GetOrderWithItemsAsync(Guid orderId)
-        {
-            return await _context.KitchenOrders
-                .Include(k => k.Items)
-                .FirstOrDefaultAsync(k => k.Id == orderId);
-        }
-
-        public async Task<KitchenOrder?> GetByOrderIdAsync(Guid orderId)
-        {
-            return await _context.KitchenOrders
-                .Include(k => k.Items)
-                .FirstOrDefaultAsync(k => k.OrderId == orderId);
-        }
     }
 }

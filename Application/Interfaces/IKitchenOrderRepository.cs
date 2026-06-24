@@ -10,12 +10,9 @@ namespace Application.Interfaces
     public interface IKitchenOrderRepository
     {
         Task<KitchenOrder?> GetByIdAsync(Guid id);
-        Task<List<KitchenOrder>> GetActiveOrdersAsync();
         Task<KitchenOrder> CreateAsync(KitchenOrder order);
         Task<KitchenOrder> UpdateAsync(KitchenOrder order);
-
         Task<KitchenOrder?> GetOrderByItemIdAsync(Guid itemId);
-        Task<KitchenOrder?> GetOrderWithItemsAsync(Guid orderId);
-        Task<KitchenOrder?> GetByOrderIdAsync(Guid orderId);
+
     }
 }

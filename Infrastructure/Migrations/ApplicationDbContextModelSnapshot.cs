@@ -56,10 +56,9 @@ namespace Infrastructure.Migrations
                     b.Property<int>("TotalItems")
                         .HasColumnType("int");
 
-                    b.Property<string>("WaiterName")
-                        .IsRequired()
+                    b.Property<Guid>("WaiterId")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 

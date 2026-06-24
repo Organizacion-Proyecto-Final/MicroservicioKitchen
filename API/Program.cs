@@ -25,15 +25,6 @@ builder.Services.AddScoped<IKitchenOrderRepository, KitchenOrderRepository>();
 
 // Handlers
 builder.Services.AddScoped<ICreateKitchenOrderHandler, CreateKitchenOrderHandler>();
-builder.Services.AddScoped<IRecalculateOrderHandler, RecalculateOrderHandler>();
-builder.Services.AddScoped<IGetKitchenOrderByIdHandler, GetKitchenOrderByIdHandler>();
-builder.Services.AddScoped<IGetKitchenOrderByOrderIdHandler, GetKitchenOrderByOrderIdHandler>();
-builder.Services.AddScoped<IMarkAsDeliveredHandler, MarkAsDeliveredHandler>();
-
-builder.Services.AddScoped<Application.UseCases.Handlers.GetKitchenQueueHandler>();
-builder.Services.AddScoped<Application.UseCases.Handlers.StartItemPreparationHandler>();
-builder.Services.AddScoped<Application.UseCases.Handlers.CompleteItemHandler>();
-builder.Services.AddScoped<Application.UseCases.Handlers.CancelItemHandler>();
 
 // Add CORS
 builder.Services.AddCors(options =>

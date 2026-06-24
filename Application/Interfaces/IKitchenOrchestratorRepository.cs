@@ -4,10 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Application.UseCases.KitchenOrders.Comands
+namespace Application.Interfaces
 {
-    public class MarkAsDeliveredCommand
+    public interface IKitchenOrchestratorRepository
     {
-        public Guid Id { get; set; }
     }
 }

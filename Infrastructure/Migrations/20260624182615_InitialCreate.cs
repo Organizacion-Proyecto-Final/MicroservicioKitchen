@@ -18,7 +18,7 @@ namespace Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     OrderId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     TableNumber = table.Column<int>(type: "int", nullable: false),
-                    WaiterName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    WaiterId = table.Column<Guid>(type: "uniqueidentifier", maxLength: 100, nullable: false),
                     Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     EstimatedFinishTime = table.Column<DateTime>(type: "datetime2", nullable: true),

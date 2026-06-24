@@ -18,7 +18,7 @@ namespace Infrastructure.Persistence.Configurations
 
             builder.Property(k => k.OrderId).IsRequired();
             builder.Property(k => k.TableNumber).IsRequired();
-            builder.Property(k => k.WaiterName).HasMaxLength(100);
+            builder.Property(k => k.WaiterId).HasMaxLength(100);
             builder.Property(k => k.Status).HasConversion<string>().IsRequired();
             builder.Property(k => k.CreatedAt).IsRequired();
 
