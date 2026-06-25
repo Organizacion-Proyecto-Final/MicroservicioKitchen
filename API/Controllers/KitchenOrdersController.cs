@@ -8,15 +8,16 @@ using Microsoft.AspNetCore.Mvc;
 namespace API.Controllers
 {
 
-    [ApiController]
+    [ApiController] 
     [Route("api/kitchenOrders")]
     public class KitchenOrdersController : ControllerBase
     {
         private readonly ICreateKitchenOrderHandler _createHandler;
-
-        public KitchenOrdersController(ICreateKitchenOrderHandler createHandler)
+        private readonly IKitchenOrderRepository _repository;
+        public KitchenOrdersController(ICreateKitchenOrderHandler createHandler, IKitchenOrderRepository repository)
         {
             _createHandler = createHandler;
+            _repository = repository;
         }
 
 
@@ -30,7 +31,16 @@ namespace API.Controllers
             return Ok(order);
         }
 
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(Guid id)
+        {
+            var order = await _repository.GetByIdAsync(id);
 
+            if (order == null)
+                return NotFound();
+
+            return Ok(order);
+        }
 
 
         // devolver la lista de platos al front 
