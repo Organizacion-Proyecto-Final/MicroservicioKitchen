@@ -5,6 +5,7 @@ using Application.UseCases.KitchenOrders.Handlers;
 using Domain.Entities;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Repositories;
+using Infrastructure.Service;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,6 +26,15 @@ builder.Services.AddScoped<IKitchenOrderRepository, KitchenOrderRepository>();
 
 // Handlers
 builder.Services.AddScoped<ICreateKitchenOrderHandler, CreateKitchenOrderHandler>();
+
+
+builder.Services.AddHttpClient<IOrderServiceClient, OrderServiceClient>(client =>
+{
+    client.BaseAddress = new Uri(
+        builder.Configuration["ExternalServices:Orders:BaseUrl"]);
+});
+
+
 
 // Add CORS
 builder.Services.AddCors(options =>
