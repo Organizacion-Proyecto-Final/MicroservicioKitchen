@@ -21,16 +21,6 @@ public sealed class KitchenOrchestratorRepository : IKitchenOrchestratorReposito
         return config?.MaxConcurrentDishes ?? 10;
     }
 
-    public async Task<List<KitchenOrderItem>> GetFlatActiveQueueAsync(int limit, CancellationToken cancellationToken = default)
-    {
-        return await _context.KitchenOrderItems
-            .Include(i => i.Order)
-            .Where(i => i.Status == ItemStatus.Pending || i.Status == ItemStatus.Preparing)
-            .OrderBy(i => i.StartTime)
-            .Take(limit)
-            .ToListAsync(cancellationToken);
-    }
-
     public async Task UpdateMaxConcurrentDishesAsync(int maxConcurrentDishes, CancellationToken cancellationToken = default)
     {
         var configuration = await _context.KitchenConfigurations.FirstOrDefaultAsync(cancellationToken);

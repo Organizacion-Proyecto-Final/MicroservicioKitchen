@@ -1,7 +1,7 @@
 using API.Authorization;
 using Application.DTOs;
 using Application.Interfaces;
-using Application.UseCases.KitchenOrders.Comands;
+using Application.UseCases.KitchenOrders.Commands;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

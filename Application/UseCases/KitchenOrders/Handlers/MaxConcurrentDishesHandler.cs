@@ -1,5 +1,5 @@
 using Application.Interfaces;
-using Application.UseCases.KitchenOrders.Comands;
+using Application.UseCases.KitchenOrders.Commands;
 using Domain.Exceptions;
 
 namespace Application.UseCases.KitchenOrders.Handlers;

@@ -50,14 +50,6 @@ public sealed class KitchenOrderRepository : IKitchenOrderRepository
         }
     }
 
-    public async Task<KitchenOrder?> GetOrderByItemIdAsync(Guid itemId, CancellationToken cancellationToken = default)
-    {
-        return await _context.KitchenOrders
-            .AsNoTracking()
-            .Include(k => k.Items)
-            .FirstOrDefaultAsync(k => k.Items.Any(i => i.Id == itemId), cancellationToken);
-    }
-
     public async Task<List<KitchenOrder>> GetActiveOrdersAsync(CancellationToken cancellationToken = default)
     {
         return await _context.KitchenOrders

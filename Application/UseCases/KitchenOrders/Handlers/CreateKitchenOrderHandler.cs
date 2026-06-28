@@ -1,8 +1,7 @@
 using Application.DTOs;
 using Application.Interfaces;
-using Application.UseCases.KitchenOrders.Comands;
+using Application.UseCases.KitchenOrders.Commands;
 using Domain.Entities;
-using Domain.Enums;
 using Domain.Exceptions;
 
 namespace Application.UseCases.KitchenOrders.Handlers;
@@ -97,33 +96,18 @@ public sealed class CreateKitchenOrderHandler : ICreateKitchenOrderHandler
 
     private static KitchenOrder BuildOrder(CreateKitchenOrderCommand command)
     {
-        var order = new KitchenOrder
-        {
-            Id = Guid.NewGuid(),
-            OrderId = command.OrderId,
-            TableId = command.TableId,
-            TableNumber = command.TableNumber,
-            WaiterId = command.WaiterId,
-            Status = OrderStatus.Pending,
-            CreatedAt = DateTime.UtcNow,
-            LastUpdatedAt = DateTime.UtcNow,
-            Items = new List<KitchenOrderItem>()
-        };
+        var order = KitchenOrder.Create(command.OrderId, command.TableId, command.TableNumber, command.WaiterId);
 
         foreach (var itemDto in command.Items)
         {
-            order.Items.Add(new KitchenOrderItem
-            {
-                Id = Guid.NewGuid(),
-                KitchenOrderId = order.Id,
-                ProductId = itemDto.ProductId,
-                ProductName = itemDto.ProductName,
-                Quantity = itemDto.Quantity,
-                DurationMinutes = itemDto.DurationMinutes,
-                FactorMultiplierTime = itemDto.FactorMultiplierTime > 0 ? itemDto.FactorMultiplierTime : DefaultFactorMultiplierTime,
-                Notes = string.IsNullOrWhiteSpace(itemDto.Notes) ? null : itemDto.Notes,
-                Status = ItemStatus.Pending
-            });
+            var factor = itemDto.FactorMultiplierTime > 0 ? itemDto.FactorMultiplierTime : DefaultFactorMultiplierTime;
+            order.AddItem(KitchenOrderItem.Create(
+                itemDto.ProductId,
+                itemDto.ProductName,
+                itemDto.Quantity,
+                itemDto.DurationMinutes,
+                factor,
+                itemDto.Notes));
         }
 
         return order;

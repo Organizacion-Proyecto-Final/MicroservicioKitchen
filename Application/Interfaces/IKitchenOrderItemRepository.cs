@@ -9,5 +9,4 @@ public interface IKitchenOrderItemRepository
     Task<List<KitchenOrderItem>> GetItemsReadyToCookAsync(CancellationToken cancellationToken = default);
     Task<List<KitchenOrderItem>> GetItemsToWaitingAsync(CancellationToken cancellationToken = default);
     Task<List<KitchenOrderItem>> GetPendingItemsAsync(CancellationToken cancellationToken = default);
-    Task CancelItemsByOrderIdAsync(Guid kitchenOrderId, CancellationToken cancellationToken = default);
 }

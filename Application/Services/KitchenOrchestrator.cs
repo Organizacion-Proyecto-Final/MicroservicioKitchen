@@ -1,9 +1,8 @@
 using Application.DTOs;
 using Application.Interfaces;
 using Domain.Entities;
-using Domain.Enums;
 using Domain.Exceptions;
-using Microsoft.Extensions.Logging;
+using Domain.Services;
 
 namespace Application.Services;
 
@@ -15,20 +14,20 @@ public sealed class KitchenOrchestrator : IKitchenOrchestrator
     private readonly IKitchenOrderItemRepository _itemRepository;
     private readonly IKitchenOrchestratorRepository _orchestratorRepository;
     private readonly IOrderServiceClient _orderServiceClient;
-    private readonly ILogger<KitchenOrchestrator> _logger;
+    private readonly KitchenSchedulingPolicy _schedulingPolicy;
 
     public KitchenOrchestrator(
         IKitchenOrderRepository repository,
         IKitchenOrchestratorRepository orchestratorRepository,
         IKitchenOrderItemRepository itemRepository,
         IOrderServiceClient orderServiceClient,
-        ILogger<KitchenOrchestrator> logger)
+        KitchenSchedulingPolicy schedulingPolicy)
     {
         _repository = repository;
         _orchestratorRepository = orchestratorRepository;
         _itemRepository = itemRepository;
         _orderServiceClient = orderServiceClient;
-        _logger = logger;
+        _schedulingPolicy = schedulingPolicy;
     }
 
     public async Task<List<KitchenQueueItemResponse>> GetItemsFromQueueAsync(CancellationToken cancellationToken = default)
@@ -41,7 +40,6 @@ public sealed class KitchenOrchestrator : IKitchenOrchestrator
     {
         var waiting = await _itemRepository.GetItemsToWaitingAsync(cancellationToken);
         var pending = await _itemRepository.GetPendingItemsAsync(cancellationToken);
-
         return waiting.Concat(pending).Select(MapToQueueItem).ToList();
     }
 
@@ -50,8 +48,7 @@ public sealed class KitchenOrchestrator : IKitchenOrchestrator
         var order = await _repository.GetByIdAsync(kitchenOrderId, cancellationToken)
             ?? throw new NotFoundException("KitchenOrder", kitchenOrderId);
 
-        order.Status = OrderStatus.Pending;
-        order.LastUpdatedAt = DateTime.UtcNow;
+        order.Enqueue();
         await _repository.UpdateAsync(order, cancellationToken);
 
         await ScheduleAsync(cancellationToken);
@@ -62,18 +59,18 @@ public sealed class KitchenOrchestrator : IKitchenOrchestrator
         var item = await _itemRepository.GetItemByIdAsync(itemId, cancellationToken)
             ?? throw new NotFoundException("KitchenOrderItem", itemId);
 
-        if (item.Status == ItemStatus.Finished)
+        if (item.IsFinished)
             return;
 
-        item.Status = ItemStatus.Finished;
-        item.FinishTime = DateTime.UtcNow;
+        item.Finish();
         await _itemRepository.UpdateItemAsync(item, cancellationToken);
 
-        if (await CheckAndCompleteOrderAsync(item.KitchenOrderId, cancellationToken))
+        var order = await _repository.GetByIdWithItemsAsync(item.KitchenOrderId, cancellationToken);
+        if (order is not null && order.Items.All(i => i.IsFinished))
         {
-            var order = await _repository.GetByIdAsync(item.KitchenOrderId, cancellationToken);
-            if (order is not null)
-                await _orderServiceClient.NotifyOrderReadyAsync(order.OrderId, cancellationToken);
+            order.MarkReady();
+            await _repository.UpdateAsync(order, cancellationToken);
+            await _orderServiceClient.NotifyOrderReadyAsync(order.OrderId, cancellationToken);
         }
 
         await ScheduleAsync(cancellationToken);
@@ -96,10 +93,7 @@ public sealed class KitchenOrchestrator : IKitchenOrchestrator
     {
         var maxDishes = await _orchestratorRepository.GetMaxConcurrentDishesAsync(cancellationToken);
         var activeOrders = await _repository.GetActiveOrdersAsync(cancellationToken);
-
-        var usedSlots = activeOrders
-            .SelectMany(o => o.Items)
-            .Count(i => i.Status == ItemStatus.Preparing);
+        var usedSlots = activeOrders.Sum(order => order.UsedSlots);
 
         while (usedSlots < maxDishes)
         {
@@ -112,53 +106,12 @@ public sealed class KitchenOrchestrator : IKitchenOrchestrator
             if (order.Items.Count > availableSlots && usedSlots > 0)
                 break;
 
-            CalculateSyncTimes(order);
-            order.Status = OrderStatus.Preparing;
-            order.LastUpdatedAt = DateTime.UtcNow;
+            _schedulingPolicy.Schedule(order);
+            order.StartPreparing();
             await _repository.UpdateAsync(order, cancellationToken);
 
             usedSlots += order.Items.Count;
         }
-    }
-
-    private static void CalculateSyncTimes(KitchenOrder order)
-    {
-        if (order.Items is null || order.Items.Count == 0)
-            return;
-
-        foreach (var item in order.Items)
-        {
-            item.EstimatedTime = (int)Math.Round(
-                item.DurationMinutes * (1 + (item.Quantity - 1) * item.FactorMultiplierTime),
-                MidpointRounding.AwayFromZero);
-        }
-
-        var maxTime = order.Items.Max(i => i.EstimatedTime);
-        var targetFinish = DateTime.UtcNow.AddMinutes(maxTime);
-
-        foreach (var item in order.Items)
-        {
-            item.StartTime = targetFinish.AddMinutes(-item.EstimatedTime);
-            item.FinishTime = targetFinish;
-            item.Status = ItemStatus.Preparing;
-        }
-    }
-
-    private async Task<bool> CheckAndCompleteOrderAsync(Guid kitchenOrderId, CancellationToken cancellationToken)
-    {
-        var order = await _repository.GetByIdWithItemsAsync(kitchenOrderId, cancellationToken);
-        if (order is null)
-            return false;
-
-        if (!order.Items.All(i => i.Status == ItemStatus.Finished))
-            return false;
-
-        order.Status = OrderStatus.Ready;
-        order.ActualFinishTime = DateTime.UtcNow;
-        order.LastUpdatedAt = DateTime.UtcNow;
-        await _repository.UpdateAsync(order, cancellationToken);
-
-        return true;
     }
 
     private static KitchenQueueItemResponse MapToQueueItem(KitchenOrderItem item) => new()

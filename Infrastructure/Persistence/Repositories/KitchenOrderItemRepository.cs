@@ -74,19 +74,4 @@ public sealed class KitchenOrderItemRepository : IKitchenOrderItemRepository
             .OrderBy(i => i.Order.CreatedAt)
             .ToListAsync(cancellationToken);
     }
-
-    public async Task CancelItemsByOrderIdAsync(Guid kitchenOrderId, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            await _context.KitchenOrderItems
-                .Where(i => i.KitchenOrderId == kitchenOrderId &&
-                            (i.Status == ItemStatus.Pending || i.Status == ItemStatus.Preparing))
-                .ExecuteUpdateAsync(s => s.SetProperty(i => i.Status, ItemStatus.Cancelled), cancellationToken);
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            throw new ConcurrencyException();
-        }
-    }
 }

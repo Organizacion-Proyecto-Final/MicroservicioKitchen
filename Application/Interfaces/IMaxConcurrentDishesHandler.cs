@@ -1,4 +1,4 @@
-using Application.UseCases.KitchenOrders.Comands;
+using Application.UseCases.KitchenOrders.Commands;
 
 namespace Application.Interfaces;
 
