@@ -26,4 +26,15 @@ public sealed class CancelKitchenOrderHandler : ICancelKitchenOrderHandler
 
         await _orchestrator.ScheduleAsync(cancellationToken);
     }
+
+    public async Task ExecuteByOrderIdAsync(Guid orderId, CancellationToken cancellationToken = default)
+    {
+        var order = await _repository.GetByOrderIdWithItemsAsync(orderId, cancellationToken)
+            ?? throw new NotFoundException("KitchenOrder (OrderId)", orderId);
+
+        order.Cancel();
+        await _repository.UpdateAsync(order, cancellationToken);
+
+        await _orchestrator.ScheduleAsync(cancellationToken);
+    }
 }

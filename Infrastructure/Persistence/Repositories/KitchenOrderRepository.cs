@@ -29,6 +29,13 @@ public sealed class KitchenOrderRepository : IKitchenOrderRepository
             .FirstOrDefaultAsync(k => k.OrderId == orderId, cancellationToken);
     }
 
+    public async Task<KitchenOrder?> GetByOrderIdWithItemsAsync(Guid orderId, CancellationToken cancellationToken = default)
+    {
+        return await _context.KitchenOrders
+            .Include(o => o.Items)
+            .FirstOrDefaultAsync(o => o.OrderId == orderId, cancellationToken);
+    }
+
     public async Task<KitchenOrder> CreateAsync(KitchenOrder order, CancellationToken cancellationToken = default)
     {
         await _context.KitchenOrders.AddAsync(order, cancellationToken);

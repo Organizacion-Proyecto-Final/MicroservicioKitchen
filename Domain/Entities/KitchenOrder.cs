@@ -67,8 +67,11 @@ public sealed class KitchenOrder
 
     public void Cancel()
     {
-        if (Status is OrderStatus.Ready or OrderStatus.Cancelled)
-            throw new ConflictException($"No se puede cancelar una orden en estado {Status}.");
+        if (Status == OrderStatus.Cancelled)
+            throw new ConflictException("La orden ya esta cancelada.");
+
+        if (_items.Any(i => i.Status != ItemStatus.Pending))
+            throw new ConflictException("No se puede cancelar la orden porque ya hay items en preparacion o finalizados.");
 
         Status = OrderStatus.Cancelled;
         Touch();

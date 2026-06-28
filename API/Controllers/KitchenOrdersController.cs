@@ -63,6 +63,14 @@ public sealed class KitchenOrdersController : ControllerBase
         return NoContent();
     }
 
+    [HttpPatch("by-order/{orderId:guid}/cancel")]
+    [Authorize(Roles = ApplicationRoles.AdminOrWaitress)]
+    public async Task<IActionResult> CancelByOrderId(Guid orderId, CancellationToken cancellationToken)
+    {
+        await _cancelKitchenOrderHandler.ExecuteByOrderIdAsync(orderId, cancellationToken);
+        return NoContent();
+    }
+
     [HttpPatch("max-concurrent-dishes")]
     [Authorize(Roles = ApplicationRoles.Admin)]
     public async Task<IActionResult> UpdateMaxConcurrentDishes([FromBody] UpdateMaxConcurrentDishesCommand command, CancellationToken cancellationToken)

@@ -6,6 +6,7 @@ public interface IKitchenOrderRepository
 {
     Task<KitchenOrder?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<KitchenOrder?> GetByOrderIdAsync(Guid orderId, CancellationToken cancellationToken = default);
+    Task<KitchenOrder?> GetByOrderIdWithItemsAsync(Guid orderId, CancellationToken cancellationToken = default);
     Task<KitchenOrder> CreateAsync(KitchenOrder order, CancellationToken cancellationToken = default);
     Task<KitchenOrder> UpdateAsync(KitchenOrder order, CancellationToken cancellationToken = default);
     Task<List<KitchenOrder>> GetActiveOrdersAsync(CancellationToken cancellationToken = default);
