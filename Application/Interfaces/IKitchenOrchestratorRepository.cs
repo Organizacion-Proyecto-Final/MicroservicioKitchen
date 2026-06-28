@@ -1,16 +1,10 @@
-﻿using Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Domain.Entities;
 
-namespace Application.Interfaces
+namespace Application.Interfaces;
+
+public interface IKitchenOrchestratorRepository
 {
-    public interface IKitchenOrchestratorRepository
-    {
-        Task<int> GetMaxConcurrentDishesAsync();
-        Task<List<KitchenOrderItem>> GetFlatActiveQueueAsync(int limit);
-        Task UpdateMaxConcurrentDishesAsync(int maxConcurrentDishes);
-    }
+    Task<int> GetMaxConcurrentDishesAsync(CancellationToken cancellationToken = default);
+    Task<List<KitchenOrderItem>> GetFlatActiveQueueAsync(int limit, CancellationToken cancellationToken = default);
+    Task UpdateMaxConcurrentDishesAsync(int maxConcurrentDishes, CancellationToken cancellationToken = default);
 }

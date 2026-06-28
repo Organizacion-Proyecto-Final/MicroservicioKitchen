@@ -1,39 +1,39 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Application.Interfaces;
 using Domain.Enums;
+using Domain.Exceptions;
 
-namespace Application.UseCases.KitchenOrders.Handlers
+namespace Application.UseCases.KitchenOrders.Handlers;
+
+public sealed class CancelKitchenOrderHandler : ICancelKitchenOrderHandler
 {
-    public class CancelKitchenOrderHandler : ICancelKitchenOrderHandler
+    private readonly IKitchenOrderRepository _repository;
+    private readonly IKitchenOrderItemRepository _itemRepository;
+    private readonly IKitchenOrchestrator _orchestrator;
+
+    public CancelKitchenOrderHandler(
+        IKitchenOrderRepository repository,
+        IKitchenOrderItemRepository itemRepository,
+        IKitchenOrchestrator orchestrator)
     {
-        private readonly IKitchenOrderRepository _repository;
+        _repository = repository;
+        _itemRepository = itemRepository;
+        _orchestrator = orchestrator;
+    }
 
-        public CancelKitchenOrderHandler(IKitchenOrderRepository repository)
-        {
-            _repository = repository;
-        }
+    public async Task ExecuteAsync(Guid kitchenOrderId, CancellationToken cancellationToken = default)
+    {
+        var order = await _repository.GetByIdAsync(kitchenOrderId, cancellationToken)
+            ?? throw new NotFoundException("KitchenOrder", kitchenOrderId);
 
-        public async Task ExecuteAsync(Guid kitchenOrderId)
-        {
-            var order = await _repository.GetByIdAsync(kitchenOrderId);
+        if (order.Status is OrderStatus.Ready or OrderStatus.Cancelled)
+            throw new ConflictException($"No se puede cancelar una orden en estado {order.Status}.");
 
-            if (order == null)
-                throw new KeyNotFoundException("Kitchen order not found.");
+        order.Status = OrderStatus.Cancelled;
+        order.LastUpdatedAt = DateTime.UtcNow;
+        await _repository.UpdateAsync(order, cancellationToken);
 
-            if (order.Status == OrderStatus.Ready)
-                throw new InvalidOperationException("A completed order cannot be cancelled.");
+        await _itemRepository.CancelItemsByOrderIdAsync(kitchenOrderId, cancellationToken);
 
-            if (order.Status == OrderStatus.Cancelled)
-                throw new InvalidOperationException("The order is already cancelled.");
-
-            order.Status = OrderStatus.Cancelled;
-            order.LastUpdatedAt = DateTime.UtcNow;
-
-            await _repository.UpdateAsync(order);
-        }
+        await _orchestrator.ScheduleAsync(cancellationToken);
     }
 }

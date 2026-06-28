@@ -1,13 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+namespace Application.Interfaces;
 
-namespace Application.Interfaces
+public interface ICancelKitchenOrderHandler
 {
-    public interface ICancelKitchenOrderHandler
-    {
-        Task ExecuteAsync(Guid kitchenOrderId);
-    }
+    Task ExecuteAsync(Guid kitchenOrderId, CancellationToken cancellationToken = default);
 }

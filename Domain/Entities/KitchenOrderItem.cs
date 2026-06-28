@@ -25,9 +25,10 @@ namespace Domain.Entities
         public DateTime? StartTime { get; set; }
         public DateTime? FinishTime { get; set; }
         public ItemStatus Status { get; set; }
-        public string Notes { get; set; } = string.Empty;
+        public string? Notes { get; set; }
+        public byte[] Version { get; set; } = Array.Empty<byte>();
 
-        [JsonIgnore] // cambiar luego por los DTOs y eliminar linea
+        [JsonIgnore]
         public virtual KitchenOrder Order { get; set; } = null!;
     }
 }

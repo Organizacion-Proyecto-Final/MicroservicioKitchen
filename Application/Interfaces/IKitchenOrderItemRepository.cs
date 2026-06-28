@@ -1,19 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Domain.Entities;
 
-namespace Application.Interfaces
+namespace Application.Interfaces;
+
+public interface IKitchenOrderItemRepository
 {
-    public interface IKitchenOrderItemRepository
-    {
-        Task UpdateItemAsync(KitchenOrderItem item);
-        Task<int> GetActiveCountAsync();
-        Task<List<KitchenOrderItem>> GetItemsReadyToCookAsync();
-        Task<KitchenOrderItem?> GetItemByIdAsync(Guid itemId);
-        Task<List<KitchenOrderItem>> GetItemsToWaitingAsync();
-        Task<List<KitchenOrderItem>> GetPendingItemsAsync();
-    }
+    Task<KitchenOrderItem?> GetItemByIdAsync(Guid itemId, CancellationToken cancellationToken = default);
+    Task UpdateItemAsync(KitchenOrderItem item, CancellationToken cancellationToken = default);
+    Task<List<KitchenOrderItem>> GetItemsReadyToCookAsync(CancellationToken cancellationToken = default);
+    Task<List<KitchenOrderItem>> GetItemsToWaitingAsync(CancellationToken cancellationToken = default);
+    Task<List<KitchenOrderItem>> GetPendingItemsAsync(CancellationToken cancellationToken = default);
+    Task CancelItemsByOrderIdAsync(Guid kitchenOrderId, CancellationToken cancellationToken = default);
 }

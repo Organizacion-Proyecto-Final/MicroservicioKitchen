@@ -20,6 +20,7 @@ namespace Domain.Entities
         public OrderStatus Status { get; set; }
         public DateTime? ActualFinishTime { get; set; }
         public DateTime LastUpdatedAt { get; set; }
+        public byte[] Version { get; set; } = Array.Empty<byte>();
 
         public virtual ICollection<KitchenOrderItem> Items { get; set; } = new List<KitchenOrderItem>();
     }

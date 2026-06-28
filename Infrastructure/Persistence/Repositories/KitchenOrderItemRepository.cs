@@ -1,87 +1,92 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Application.Interfaces;
 using Domain.Entities;
 using Domain.Enums;
-using Application.Interfaces;
+using Domain.Exceptions;
 using Microsoft.EntityFrameworkCore;
-using Application.DTOs;
 
-namespace Infrastructure.Persistence.Repositories
+namespace Infrastructure.Persistence.Repositories;
+
+public sealed class KitchenOrderItemRepository : IKitchenOrderItemRepository
 {
-    public class KitchenOrderItemRepository : IKitchenOrderItemRepository
+    private readonly ApplicationDbContext _context;
+
+    public KitchenOrderItemRepository(ApplicationDbContext context)
     {
-        private readonly ApplicationDbContext _context;
+        _context = context;
+    }
 
-        public KitchenOrderItemRepository(ApplicationDbContext context)
-        {
-            _context = context;
-        }
+    public async Task<KitchenOrderItem?> GetItemByIdAsync(Guid itemId, CancellationToken cancellationToken = default)
+    {
+        return await _context.KitchenOrderItems
+            .FirstOrDefaultAsync(i => i.Id == itemId, cancellationToken);
+    }
 
-        public async Task<KitchenOrderItem?> GetItemByIdAsync(Guid itemId)
-        {
-            return await _context.KitchenOrderItems
-                .FirstOrDefaultAsync(i => i.Id == itemId);
-        }
-
-        public async Task UpdateItemAsync(KitchenOrderItem item)
+    public async Task UpdateItemAsync(KitchenOrderItem item, CancellationToken cancellationToken = default)
+    {
+        try
         {
             _context.KitchenOrderItems.Update(item);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(cancellationToken);
         }
-        public async Task<int> GetActiveCountAsync()
+        catch (DbUpdateConcurrencyException)
         {
-            return await _context.KitchenOrderItems
-                .Where(x => x.Status == Domain.Enums.ItemStatus.Preparing)
-                .CountAsync();
+            throw new ConcurrencyException();
         }
-        public async Task<List<KitchenOrderItem>> GetNextWaitingItemsAsync(int take)
+    }
+
+    public async Task<List<KitchenOrderItem>> GetItemsReadyToCookAsync(CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+
+        return await _context.KitchenOrderItems
+            .AsNoTracking()
+            .Include(i => i.Order)
+            .Where(i => i.Status == ItemStatus.Preparing &&
+                        i.Order.Status != OrderStatus.Cancelled &&
+                        i.StartTime != null && i.StartTime <= now)
+            .OrderBy(i => i.StartTime)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<List<KitchenOrderItem>> GetItemsToWaitingAsync(CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+
+        return await _context.KitchenOrderItems
+            .AsNoTracking()
+            .Include(i => i.Order)
+            .Where(i =>
+                i.Order.Status == OrderStatus.Preparing &&
+                i.Status == ItemStatus.Preparing &&
+                i.StartTime > now)
+            .OrderBy(i => i.StartTime)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<List<KitchenOrderItem>> GetPendingItemsAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.KitchenOrderItems
+            .AsNoTracking()
+            .Include(i => i.Order)
+            .Where(i =>
+                i.Order.Status == OrderStatus.Pending &&
+                i.Status == ItemStatus.Pending)
+            .OrderBy(i => i.Order.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task CancelItemsByOrderIdAsync(Guid kitchenOrderId, CancellationToken cancellationToken = default)
+    {
+        try
         {
-            return await _context.KitchenOrderItems
-                .Include(i => i.Order)
-                .Where(i => i.Status == Domain.Enums.ItemStatus.Pending)
-                .OrderBy(i => i.Order.CreatedAt)   // 👈 clave
-                .ThenBy(i => i.Id)                 // desempate estable
-                .Take(take)
-                .ToListAsync();
+            await _context.KitchenOrderItems
+                .Where(i => i.KitchenOrderId == kitchenOrderId &&
+                            (i.Status == ItemStatus.Pending || i.Status == ItemStatus.Preparing))
+                .ExecuteUpdateAsync(s => s.SetProperty(i => i.Status, ItemStatus.Cancelled), cancellationToken);
         }
-
-        public async Task<List<KitchenOrderItem>> GetItemsReadyToCookAsync()
+        catch (DbUpdateConcurrencyException)
         {
-            var now = DateTime.UtcNow;
-
-            return await _context.KitchenOrderItems
-                .Where(i => i.Status == ItemStatus.Preparing &&
-                            i.StartTime <= now)
-                .OrderBy(i => i.StartTime)
-                .ToListAsync();
+            throw new ConcurrencyException();
         }
-        public async Task<List<KitchenOrderItem>> GetItemsToWaitingAsync()
-        {
-            var now = DateTime.UtcNow;
-
-            return await _context.KitchenOrderItems
-                .Include(i => i.Order)
-                .Where(i =>
-                    i.Order.Status == OrderStatus.Preparing &&
-                    i.Status == ItemStatus.Preparing &&
-                    i.StartTime > now)
-                .OrderBy(i => i.StartTime)
-                .ToListAsync();
-        }
-
-        public async Task<List<KitchenOrderItem>> GetPendingItemsAsync()
-        {
-            return await _context.KitchenOrderItems
-                .Include(i => i.Order)
-                .Where(i => i.Order.Status == OrderStatus.Pending)
-                .OrderBy(i => i.Order.CreatedAt)
-                .ToListAsync();
-        }
-
-
-
     }
 }

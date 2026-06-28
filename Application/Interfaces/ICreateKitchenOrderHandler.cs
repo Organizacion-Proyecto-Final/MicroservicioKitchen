@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Application.DTOs;
 using Application.UseCases.KitchenOrders.Comands;
-using Domain.Entities;
 
-namespace Application.Interfaces
+namespace Application.Interfaces;
+
+public interface ICreateKitchenOrderHandler
 {
-    public interface ICreateKitchenOrderHandler
-    {
-        Task<KitchenOrder> CreateKitchenOrder(CreateKitchenOrderCommand command);
-    }
+    Task<CreateKitchenOrderResponseDto> CreateKitchenOrder(CreateKitchenOrderCommand command, CancellationToken cancellationToken = default);
 }

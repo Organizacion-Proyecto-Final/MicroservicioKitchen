@@ -1,116 +1,131 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Application.DTOs;
 using Application.Interfaces;
 using Application.UseCases.KitchenOrders.Comands;
 using Domain.Entities;
 using Domain.Enums;
 using Domain.Exceptions;
 
-namespace Application.UseCases.KitchenOrders.Handlers
+namespace Application.UseCases.KitchenOrders.Handlers;
+
+public sealed class CreateKitchenOrderHandler : ICreateKitchenOrderHandler
 {
-    public class CreateKitchenOrderHandler : ICreateKitchenOrderHandler
+    private const decimal DefaultFactorMultiplierTime = 0.5m;
+
+    private readonly IKitchenOrderRepository _repository;
+    private readonly IKitchenOrchestrator _orchestrator;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public CreateKitchenOrderHandler(
+        IKitchenOrderRepository repository,
+        IKitchenOrchestrator orchestrator,
+        IUnitOfWork unitOfWork)
     {
-        private readonly IKitchenOrderRepository _repository;
-        private readonly IKitchenOrchestrator _orchestrator;
-        public CreateKitchenOrderHandler(IKitchenOrderRepository repository, IKitchenOrchestrator orchestrator)
+        _repository = repository;
+        _orchestrator = orchestrator;
+        _unitOfWork = unitOfWork;
+    }
+
+    public async Task<CreateKitchenOrderResponseDto> CreateKitchenOrder(CreateKitchenOrderCommand command, CancellationToken cancellationToken = default)
+    {
+        Validate(command);
+
+        var existing = await _repository.GetByOrderIdAsync(command.OrderId, cancellationToken);
+        if (existing is not null)
         {
-            _repository = repository;
-            _orchestrator = orchestrator;
+            return new CreateKitchenOrderResponseDto
+            {
+                Success = true,
+                Message = "La orden ya estaba registrada en cocina.",
+                KitchenOrderId = existing.Id
+            };
         }
 
-        public async Task<KitchenOrder> CreateKitchenOrder(CreateKitchenOrderCommand command)
+        var order = BuildOrder(command);
+
+        var savedOrder = await _unitOfWork.ExecuteAsync(async () =>
         {
-            // 1. Validar que haya items
-            if (command.Items == null || !command.Items.Any())
-            {
-                throw new ValidationExceptions(new Dictionary<string, string[]>
-            {
-                { "items", new[] { "La orden debe contener al menos un item." } }
-            });
-            }
+            var created = await _repository.CreateAsync(order, cancellationToken);
+            await _orchestrator.EnqueueOrderAsync(created.Id, cancellationToken);
+            return created;
+        }, cancellationToken);
 
-            // 2. Validar número de mesa
-            if (command.TableNumber <= 0)
-            {
-                throw new ValidationExceptions(new Dictionary<string, string[]>
-            {
-                { "tableNumber", new[] { "El número de mesa debe ser mayor a 0." } }
-            });
-            }
+        return new CreateKitchenOrderResponseDto
+        {
+            Success = true,
+            KitchenOrderId = savedOrder.Id
+        };
+    }
 
+    private static void Validate(CreateKitchenOrderCommand command)
+    {
+        var errors = new Dictionary<string, string[]>();
 
-            // 4. Validar cada item
-            var validationErrors = new Dictionary<string, string[]>();
-            for (int i = 0; i < command.Items.Count; i++)
+        if (command.OrderId == Guid.Empty)
+            errors["orderId"] = new[] { "El OrderId es obligatorio." };
+
+        if (command.TableNumber <= 0)
+            errors["tableNumber"] = new[] { "El numero de mesa debe ser mayor a 0." };
+
+        if (command.Items is null || command.Items.Count == 0)
+        {
+            errors["items"] = new[] { "La orden debe contener al menos un item." };
+        }
+        else
+        {
+            for (var i = 0; i < command.Items.Count; i++)
             {
                 var item = command.Items[i];
-                var itemErrors = new List<string>();
+                var messages = new List<string>();
 
                 if (item.ProductId == Guid.Empty)
-                    itemErrors.Add("El ProductId es obligatorio.");
-
+                    messages.Add("El ProductId es obligatorio.");
                 if (string.IsNullOrWhiteSpace(item.ProductName))
-                    itemErrors.Add("El nombre del producto es obligatorio.");
-
+                    messages.Add("El nombre del producto es obligatorio.");
                 if (item.DurationMinutes <= 0)
-                    itemErrors.Add("El tiempo estimado debe ser mayor a 0 minutos.");
+                    messages.Add("El tiempo estimado debe ser mayor a 0 minutos.");
+                if (item.Quantity <= 0)
+                    messages.Add("La cantidad debe ser mayor a 0.");
 
-                if (itemErrors.Any())
-                {
-                    validationErrors[$"items[{i}]"] = itemErrors.ToArray();
-                }
+                if (messages.Count > 0)
+                    errors[$"items[{i}]"] = messages.ToArray();
             }
+        }
 
-            if (validationErrors.Any())
-            {
-                throw new ValidationExceptions(validationErrors);
-            }
-            // 1. Crear la orden principal
-            var order = new KitchenOrder
+        if (errors.Count > 0)
+            throw new ValidationExceptions(errors);
+    }
+
+    private static KitchenOrder BuildOrder(CreateKitchenOrderCommand command)
+    {
+        var order = new KitchenOrder
+        {
+            Id = Guid.NewGuid(),
+            OrderId = command.OrderId,
+            TableId = command.TableId,
+            TableNumber = command.TableNumber,
+            WaiterId = command.WaiterId,
+            Status = OrderStatus.Pending,
+            CreatedAt = DateTime.UtcNow,
+            LastUpdatedAt = DateTime.UtcNow,
+            Items = new List<KitchenOrderItem>()
+        };
+
+        foreach (var itemDto in command.Items)
+        {
+            order.Items.Add(new KitchenOrderItem
             {
                 Id = Guid.NewGuid(),
-                OrderId = command.OrderId,
-                TableNumber = command.TableNumber,
-                WaiterId = command.WaiterId,
-                Status = OrderStatus.Pending,
-                CreatedAt = DateTime.UtcNow,
-                LastUpdatedAt = DateTime.UtcNow,
-                Items = new List<KitchenOrderItem>()
-            };
-
-            // 2. Crear los items de la orden
-            foreach (var itemDto in command.Items)
-            {
-                var item = new KitchenOrderItem
-                {
-                    Id = Guid.NewGuid(),
-                    KitchenOrderId = order.Id,
-                    ProductId = itemDto.ProductId,
-                    ProductName = itemDto.ProductName,
-                    Quantity = itemDto.Quantity,
-                    DurationMinutes = itemDto.DurationMinutes,
-                    FactorMultiplierTime = itemDto.FactorMultiplierTime,
-
-                    StartTime = null,
-                    FinishTime = null,
-                    Status = ItemStatus.Pending,
-                    Notes = itemDto.Notes,
-                };
-
-                order.Items.Add(item);
-            }
-            // 3. Guardar en la base de datos
-            var savedOrder = await _repository.CreateAsync(order);
-
-            // 4. Llamar al Orchestrator para calcular los tiempos
-            await _orchestrator.EnqueueOrderAsync(savedOrder.Id);
-
-            // 5. Recargar la orden con los tiempos actualizados
-            return await _repository.GetByIdAsync(savedOrder.Id);
+                KitchenOrderId = order.Id,
+                ProductId = itemDto.ProductId,
+                ProductName = itemDto.ProductName,
+                Quantity = itemDto.Quantity,
+                DurationMinutes = itemDto.DurationMinutes,
+                FactorMultiplierTime = itemDto.FactorMultiplierTime > 0 ? itemDto.FactorMultiplierTime : DefaultFactorMultiplierTime,
+                Notes = string.IsNullOrWhiteSpace(itemDto.Notes) ? null : itemDto.Notes,
+                Status = ItemStatus.Pending
+            });
         }
+
+        return order;
     }
 }

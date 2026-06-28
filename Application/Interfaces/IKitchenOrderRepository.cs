@@ -1,21 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Domain.Entities;
 
-namespace Application.Interfaces
-{
-    public interface IKitchenOrderRepository
-    {
-        Task<KitchenOrder?> GetByIdAsync(Guid id);
-        Task<KitchenOrder> CreateAsync(KitchenOrder order);
-        Task<KitchenOrder> UpdateAsync(KitchenOrder order);
-        Task<KitchenOrder?> GetOrderByItemIdAsync(Guid itemId);
-        Task<List<KitchenOrder>> GetActiveOrdersAsync();
-        Task<KitchenOrder?> GetNextWaitingOrderAsync();
-        Task<KitchenOrder?> GetByIdWithItemsAsync(Guid id);
+namespace Application.Interfaces;
 
-    }
+public interface IKitchenOrderRepository
+{
+    Task<KitchenOrder?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<KitchenOrder?> GetByOrderIdAsync(Guid orderId, CancellationToken cancellationToken = default);
+    Task<KitchenOrder> CreateAsync(KitchenOrder order, CancellationToken cancellationToken = default);
+    Task<KitchenOrder> UpdateAsync(KitchenOrder order, CancellationToken cancellationToken = default);
+    Task<KitchenOrder?> GetOrderByItemIdAsync(Guid itemId, CancellationToken cancellationToken = default);
+    Task<List<KitchenOrder>> GetActiveOrdersAsync(CancellationToken cancellationToken = default);
+    Task<KitchenOrder?> GetNextWaitingOrderAsync(CancellationToken cancellationToken = default);
+    Task<KitchenOrder?> GetByIdWithItemsAsync(Guid id, CancellationToken cancellationToken = default);
 }

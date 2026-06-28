@@ -1,28 +1,46 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Application.Interfaces;
+using Microsoft.Extensions.Logging;
+using System.Net;
 
-namespace Infrastructure.Service
+namespace Infrastructure.Service;
+
+public sealed class OrderServiceClient : IOrderServiceClient
 {
-    public class OrderServiceClient : IOrderServiceClient
+    private const string KitchenReadyPath = "api/v1/orders/{0}/kitchen-ready";
+
+    private readonly HttpClient _httpClient;
+    private readonly ILogger<OrderServiceClient> _logger;
+
+    public OrderServiceClient(HttpClient httpClient, ILogger<OrderServiceClient> logger)
     {
-        private readonly HttpClient _httpClient;
+        _httpClient = httpClient;
+        _logger = logger;
+    }
 
-        public OrderServiceClient(HttpClient httpClient)
-        {
-            _httpClient = httpClient;
-        }
-
-        public async Task NotifyOrderReady(Guid orderId)
+    public async Task NotifyOrderReadyAsync(Guid orderId, CancellationToken cancellationToken = default)
+    {
+        try
         {
             var response = await _httpClient.PostAsync(
-                $"api/orders/{orderId}/ready",   // ver bien como es el endpoint de order
-                null);
+                string.Format(KitchenReadyPath, orderId),
+                content: null,
+                cancellationToken);
+
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("OrderService no encontro la orden {OrderId} al notificar kitchen-ready.", orderId);
+                return;
+            }
 
             response.EnsureSuccessStatusCode();
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "No se pudo notificar a OrderService que la orden de cocina {OrderId} esta lista.", orderId);
+        }
+        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogError(ex, "Timeout al notificar a OrderService que la orden de cocina {OrderId} esta lista.", orderId);
         }
     }
 }

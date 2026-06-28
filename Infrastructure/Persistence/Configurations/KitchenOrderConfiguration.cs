@@ -36,6 +36,11 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(x => x.CreatedAt)
                 .IsRequired();
 
+            builder.Property(x => x.Version)
+                .IsRowVersion();
+
+            builder.HasIndex(x => x.OrderId)
+                .IsUnique();
 
             builder.HasMany(x => x.Items)
                 .WithOne(x => x.Order)
